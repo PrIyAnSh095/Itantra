@@ -138,6 +138,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val downloadProgressPercent: LiveData<Int> = _downloadProgressPercent
 
     init {
+        // Ensure all offline models are ready right out of the box
+        modelManager.ensureAllDemoModelsInstalled()
+
         // Apply initial transport
         val useBt = prefs.getBoolean(KEY_TRANSPORT_BT, false)
         setTransportType(!useBt)

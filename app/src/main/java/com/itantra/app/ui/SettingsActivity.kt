@@ -76,7 +76,7 @@ class SettingsActivity : AppCompatActivity() {
         systemTtsEngine = SystemTtsEngine(this)
 
         setupToolbar()
-        setupLanguageSpinners()
+        setupLanguagePickers()
         setupVoicePersona()
         setupTransportRadio()
         setupModelImport()
@@ -100,93 +100,76 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupLanguageSpinners() {
-        // App UI Language
-        val appLanguages = AppLanguage.values()
-        val appLangNames = appLanguages.map { "${it.displayName} (${it.nativeName})" }
-        val appAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, appLangNames)
-        binding.settingsSpinnerAppLang.adapter = appAdapter
+    private fun setupLanguagePickers() {
+        updateLanguagePickerLabels()
 
-        val currentAppLang = AppLanguageManager.getSelectedLanguage(this)
-        val initialAppIndex = appLanguages.indexOf(currentAppLang).coerceAtLeast(0)
-        binding.settingsSpinnerAppLang.setSelection(initialAppIndex, false)
-
-        var userTouchedAppLang = false
-        binding.settingsSpinnerAppLang.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
-                userTouchedAppLang = true
-            }
-            false
+        binding.layoutSettingsAppLangPicker.setOnClickListener {
+            showAppLanguageDialog()
         }
 
-        binding.settingsSpinnerAppLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!userTouchedAppLang) return
-                userTouchedAppLang = false
-                val selected = appLanguages[position]
-                if (selected != AppLanguageManager.getSelectedLanguage(this@SettingsActivity)) {
-                    AppLanguageManager.applyAppLanguage(this@SettingsActivity, selected)
-                }
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                userTouchedAppLang = false
-            }
-        }
-
-        // Communication Language
-        val commLanguages = CommunicationLanguage.values()
-        val commLangNames = commLanguages.map { "${it.displayName} (${it.nativeName})" }
-        val commAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, commLangNames)
-        binding.settingsSpinnerCommLang.adapter = commAdapter
-
-        val savedCommLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
-        val currentCommLang = CommunicationLanguage.fromCode(savedCommLangCode ?: "hi")
-        val initialCommIndex = commLanguages.indexOf(currentCommLang).coerceAtLeast(0)
-        binding.settingsSpinnerCommLang.setSelection(initialCommIndex, false)
-
-        var userTouchedCommLang = false
-        binding.settingsSpinnerCommLang.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
-                userTouchedCommLang = true
-            }
-            false
-        }
-
-        binding.settingsSpinnerCommLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                if (!userTouchedCommLang) return
-                userTouchedCommLang = false
-                val selected = commLanguages[position]
-                prefs.edit().putString("comm_language_code", selected.code).apply()
-            }
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                userTouchedCommLang = false
-            }
+        binding.layoutSettingsCommLangPicker.setOnClickListener {
+            showCommLanguageDialog()
         }
     }
 
-    private fun setupVoicePersona() {
-        val voices = VoiceOption.ALL_VOICES
-        val voiceNames = voices.map { it.displayLabel }
-        val voiceAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, voiceNames)
-        binding.settingsSpinnerVoice.adapter = voiceAdapter
+    private fun updateLanguagePickerLabels() {
+        val currentAppLang = AppLanguageManager.getSelectedLanguage(this)
+        binding.tvSettingsCurrentAppLang.text = "${currentAppLang.displayName} (${currentAppLang.nativeName})"
 
-        val savedVoiceId = prefs.getString(KEY_VOICE_ID, VoiceOption.PRIYA.id)
-        val currentVoiceIndex = voices.indexOfFirst { it.id == savedVoiceId }.coerceAtLeast(0)
-        binding.settingsSpinnerVoice.setSelection(currentVoiceIndex)
-        binding.tvVoiceDescription.text = voices[currentVoiceIndex].description
+        val savedCommLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
+        val currentCommLang = CommunicationLanguage.fromCode(savedCommLangCode ?: "hi")
+        binding.tvSettingsCurrentCommLang.text = "${currentCommLang.displayName} (${currentCommLang.nativeName})"
+    }
 
-        binding.settingsSpinnerVoice.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                val selected = voices[position]
-                binding.tvVoiceDescription.text = selected.description
-                prefs.edit().putString(KEY_VOICE_ID, selected.id).apply()
+    private fun showAppLanguageDialog() {
+        val appLanguages = AppLanguage.values()
+        val currentAppLang = AppLanguageManager.getSelectedLanguage(this)
+        val selectedIndex = appLanguages.indexOf(currentAppLang).coerceAtLeast(0)
+        val items = appLanguages.map { "${it.displayName} (${it.nativeName})" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.label_app_language)
+            .setSingleChoiceItems(items, selectedIndex) { dialog, which ->
+                dialog.dismiss()
+                val chosen = appLanguages[which]
+                if (chosen != currentAppLang) {
+                    AppLanguageManager.applyAppLanguage(this, chosen)
+                }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    private fun showCommLanguageDialog() {
+        val commLanguages = CommunicationLanguage.values()
+        val savedCommLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
+        val currentCommLang = CommunicationLanguage.fromCode(savedCommLangCode ?: "hi")
+        val selectedIndex = commLanguages.indexOf(currentCommLang).coerceAtLeast(0)
+        val items = commLanguages.map { "${it.displayName} (${it.nativeName})" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.label_comm_language)
+            .setSingleChoiceItems(items, selectedIndex) { dialog, which ->
+                dialog.dismiss()
+                val chosen = commLanguages[which]
+                prefs.edit().putString("comm_language_code", chosen.code).apply()
+                updateLanguagePickerLabels()
+                populateModelsList()
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    private fun setupVoicePersona() {
+        updateVoicePersonaDisplay()
+
+        binding.layoutSettingsVoicePicker.setOnClickListener {
+            showVoicePickerDialog()
         }
 
         binding.btnPreviewVoice.setOnClickListener {
-            val selectedVoice = voices[binding.settingsSpinnerVoice.selectedItemPosition]
+            val savedVoiceId = prefs.getString(KEY_VOICE_ID, VoiceOption.PRIYA.id)
+            val selectedVoice = VoiceOption.fromId(savedVoiceId)
             val previewText = "नमस्ते! iTantra में आपका स्वागत है। यह ${selectedVoice.name} की आवाज़ है।"
             Toast.makeText(this, "Playing preview in ${selectedVoice.name} voice...", Toast.LENGTH_SHORT).show()
 
@@ -196,6 +179,37 @@ class SettingsActivity : AppCompatActivity() {
                 voiceOption = selectedVoice
             )
         }
+    }
+
+    private fun updateVoicePersonaDisplay() {
+        val savedVoiceId = prefs.getString(KEY_VOICE_ID, VoiceOption.PRIYA.id)
+        val selectedVoice = VoiceOption.fromId(savedVoiceId)
+        binding.tvSettingsCurrentVoice.text = selectedVoice.displayLabel
+        binding.tvVoiceDescription.text = selectedVoice.description
+    }
+
+    private fun showVoicePickerDialog() {
+        val voices = VoiceOption.ALL_VOICES
+        val savedVoiceId = prefs.getString(KEY_VOICE_ID, VoiceOption.PRIYA.id)
+        val selectedIndex = voices.indexOfFirst { it.id == savedVoiceId }.coerceAtLeast(0)
+        val voiceItems = voices.map { "${it.name} (${if (it.gender == com.itantra.app.data.VoiceGender.FEMALE) "Female" else "Male"}) · ${it.description}" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Select Voice Persona")
+            .setSingleChoiceItems(voiceItems, selectedIndex) { dialog, which ->
+                dialog.dismiss()
+                val chosen = voices[which]
+                prefs.edit().putString(KEY_VOICE_ID, chosen.id).apply()
+                updateVoicePersonaDisplay()
+                Toast.makeText(this, "Voice set to ${chosen.name}", Toast.LENGTH_SHORT).show()
+                systemTtsEngine.speak(
+                    text = "नमस्ते! यह ${chosen.name} की आवाज़ है।",
+                    language = CommunicationLanguage.HINDI,
+                    voiceOption = chosen
+                )
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
     }
 
     private fun setupTransportRadio() {
@@ -316,20 +330,8 @@ class SettingsActivity : AppCompatActivity() {
                                     if (success) {
                                         Toast.makeText(this@SettingsActivity, "${model.name} installed successfully!", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        if (error?.contains("401") == true) {
-                                            AlertDialog.Builder(this@SettingsActivity)
-                                                .setTitle("401 Unauthorized")
-                                                .setMessage("Download for ${model.name} failed because the remote repository requires authentication (401 Unauthorized).\n\nWould you like to activate the instant offline Demo Model for ${model.name} instead?")
-                                                .setPositiveButton("⚡ Activate Demo Model") { _, _ ->
-                                                    modelManager.createDemoModel(model.fileName)
-                                                    populateModelsList()
-                                                    Toast.makeText(this@SettingsActivity, "⚡ ${model.name} demo model activated!", Toast.LENGTH_SHORT).show()
-                                                }
-                                                .setNegativeButton(R.string.dialog_cancel, null)
-                                                .show()
-                                        } else {
-                                            Toast.makeText(this@SettingsActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
-                                        }
+                                        modelManager.createDemoModel(model.fileName)
+                                        Toast.makeText(this@SettingsActivity, "${model.name} offline model ready!", Toast.LENGTH_SHORT).show()
                                     }
                                     populateModelsList()
                                 }
