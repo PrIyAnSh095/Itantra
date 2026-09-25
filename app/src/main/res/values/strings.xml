@@ -1,0 +1,114 @@
+<resources>
+    <string name="app_name">iTantra</string>
+    <string name="app_subtitle">Neural Voice Transceiver</string>
+    <string name="sih_title">SIH 26173</string>
+
+    <!-- Network & Connection Status -->
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting...</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_error">Connection Error</string>
+    <string name="status_hosting">Hosting room %1$s · IP: %2$s</string>
+    <string name="status_joined">Joined room: %1$s</string>
+    <string name="status_bt_connected">Connected via Bluetooth SPP</string>
+    <string name="status_bt_listening">Bluetooth listening for connection...</string>
+    <string name="network_local">LOCAL NETWORK</string>
+    <string name="network_wifi_hotspot">Wi-Fi Hotspot</string>
+    <string name="network_bluetooth">Bluetooth RFCOMM</string>
+    <string name="clients_count">%1$d client(s) connected</string>
+
+    <!-- Language Selector Labels -->
+    <string name="label_app_language">App Language</string>
+    <string name="label_comm_language">Communication Language</string>
+    <string name="lang_english">English</string>
+    <string name="lang_hindi">Hindi</string>
+    <string name="lang_gujarati">Gujarati</string>
+    <string name="lang_en_native">English</string>
+    <string name="lang_hi_native">हिन्दी</string>
+    <string name="lang_gu_native">ગુજરાતી</string>
+
+    <!-- Room / Connection Controls -->
+    <string name="label_room">ROOM</string>
+    <string name="mode_host">HOST</string>
+    <string name="mode_join">JOIN</string>
+    <string name="hint_room_code">Room Code (e.g. 482731)</string>
+    <string name="btn_connect">CONNECT</string>
+    <string name="btn_disconnect">DISCONNECT</string>
+    <string name="btn_generate_code">Generate</string>
+
+    <!-- Conversation & Transcript -->
+    <string name="label_conversation">CONVERSATION</string>
+    <string name="transcript_empty">Hold to speak. Transcribed speech and received messages will appear here.</string>
+    <string name="label_you">You</string>
+    <string name="label_received">Received</string>
+
+    <!-- Performance & Bandwidth Metrics -->
+    <string name="label_performance">PERFORMANCE</string>
+    <string name="metric_stt">STT</string>
+    <string name="metric_network">Network</string>
+    <string name="metric_tts">TTS</string>
+    <string name="metric_translation">Translation</string>
+    <string name="metric_e2e">E2E</string>
+    <string name="metric_payload">Payload</string>
+    <string name="metric_raw_pcm">Raw PCM</string>
+    <string name="metric_saved">Saved</string>
+    <string name="metric_reduction">Reduction</string>
+    <string name="metric_skipped">SKIPPED</string>
+    <string name="metric_bytes_saved_format">Sent: %1$d B · PCM: %2$d B (%3$.1f%% saved)</string>
+
+    <!-- PTT & States -->
+    <string name="btn_hold_to_speak">HOLD TO SPEAK</string>
+    <string name="state_ready">READY</string>
+    <string name="state_recording">● RECORDING...</string>
+    <string name="state_processing">PROCESSING (STT)...</string>
+    <string name="state_sending">SENDING PACKET...</string>
+    <string name="state_receiving">RECEIVING...</string>
+    <string name="state_playing">PLAYING (TTS)...</string>
+
+    <!-- Alert System -->
+    <string name="btn_send_alert">SEND ALERT</string>
+    <string name="btn_alert_active">ALERT ACTIVE</string>
+    <string name="alert_banner">EMERGENCY ALERT RECEIVED</string>
+
+    <!-- Settings Screen -->
+    <string name="title_settings">Settings</string>
+    <string name="section_language">LANGUAGE</string>
+    <string name="section_network">NETWORK</string>
+    <string name="pref_transport">Preferred Transport</string>
+    <string name="transport_wifi">Wi-Fi Hotspot (Primary)</string>
+    <string name="transport_bluetooth">Bluetooth Classic RFCOMM (Fallback)</string>
+    <string name="section_audio">AUDIO</string>
+    <string name="label_alert_volume">Emergency Alert Playback</string>
+    <string name="desc_alert_volume">Plays alert audio via STREAM_ALARM at maximum volume with screen wake lock.</string>
+    <string name="section_models">LOCAL AI MODELS</string>
+    <string name="model_installed">Installed</string>
+    <string name="model_not_installed">Model not installed</string>
+    <string name="model_bundled">Bundled in APK</string>
+    <string name="model_loading">Model loading...</string>
+    <string name="model_ready">Ready</string>
+    <string name="model_error">Model error</string>
+    <string name="btn_download">Download</string>
+    <string name="btn_remove">Remove</string>
+    <string name="section_about">ABOUT</string>
+    <string name="about_title">iTantra — Neural Voice Transceiver</string>
+    <string name="about_desc">Smart India Hackathon 2024 · Problem ID: 26173\nIndian Multilingual TTS &amp; STT Aided Neural Transceiver Radio Access for Low Bitrate Links\nDeveloped by Team DEPSTAR · CHARUSAT</string>
+
+    <!-- Error & Validation Messages -->
+    <string name="err_mic_permission">Microphone permission is required for speech capture.</string>
+    <string name="err_bluetooth_permission">Bluetooth permissions are required for fallback mode.</string>
+    <string name="err_enter_room_code">Please enter a valid room code.</string>
+    <string name="err_connection_failed">Connection failed. Check Wi-Fi Hotspot or Bluetooth pairing.</string>
+    <string name="err_bluetooth_unavailable">Bluetooth is not enabled or not supported on this device.</string>
+    <string name="err_model_missing_comm">%1$s model is not installed. Please download or place the model file.</string>
+    <string name="err_stt_failed">Speech recognition failed.</string>
+    <string name="err_tts_failed">Speech synthesis failed.</string>
+    <string name="err_translation_failed">Translation failed.</string>
+    <string name="err_packet_malformed">Received an invalid or malformed packet.</string>
+    <string name="err_storage_insufficient">Insufficient storage for language model.</string>
+    <string name="msg_alert_sent">Emergency alert broadcast sent!</string>
+    <string name="msg_cannot_speak_disconnected">Connect to a room to speak.</string>
+
+    <!-- Common UI -->
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
+</resources>

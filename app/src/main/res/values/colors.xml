@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Backgrounds -->
+    <color name="bg_screen">#F8FAFC</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_card_secondary">#F1F5F9</color>
+    <color name="border_card">#E2E8F0</color>
+
+    <!-- Typography -->
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_muted">#64748B</color>
+    <color name="text_inverse">#FFFFFF</color>
+
+    <!-- Primary Brand (Blue) -->
+    <color name="primary_blue">#2563EB</color>
+    <color name="primary_blue_dark">#1D4ED8</color>
+    <color name="primary_blue_light">#EFF6FF</color>
+    <color name="primary_blue_border">#BFDBFE</color>
+
+    <!-- Success & Connected (Green) -->
+    <color name="state_green">#16A34A</color>
+    <color name="state_green_bg">#DCFCE7</color>
+    <color name="state_green_border">#86EFAC</color>
+
+    <!-- Warning & Latency (Orange) -->
+    <color name="state_orange">#EA580C</color>
+    <color name="state_orange_bg">#FFEDD5</color>
+    <color name="state_orange_border">#FDBA74</color>
+
+    <!-- Error & Emergency Alert (Red) -->
+    <color name="state_red">#DC2626</color>
+    <color name="state_red_dark">#B91C1C</color>
+    <color name="state_red_bg">#FEE2E2</color>
+    <color name="state_red_border">#FCA5A5</color>
+
+    <!-- Neutral & Disconnected (Slate) -->
+    <color name="state_gray">#64748B</color>
+    <color name="state_gray_bg">#F1F5F9</color>
+    <color name="state_gray_border">#CBD5E1</color>
+
+    <!-- PTT Button States -->
+    <color name="ptt_idle_bg">#1E293B</color>
+    <color name="ptt_recording_bg">#DC2626</color>
+    <color name="ptt_processing_bg">#D97706</color>
+</resources>

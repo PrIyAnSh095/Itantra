@@ -1,0 +1,114 @@
+<resources>
+    <string name="app_name">iTantra</string>
+    <string name="app_subtitle">न्यूरल वॉइस ट्रांसीवर</string>
+    <string name="sih_title">SIH 26173</string>
+
+    <!-- Network & Connection Status -->
+    <string name="status_disconnected">डिस्कनेक्टेड</string>
+    <string name="status_connecting">कनेक्ट हो रहा है...</string>
+    <string name="status_connected">कनेक्टेड</string>
+    <string name="status_error">कनेक्शन त्रुटि</string>
+    <string name="status_hosting">रूम %1$s होस्ट कर रहे हैं · IP: %2$s</string>
+    <string name="status_joined">रूम %1$s में शामिल हुए</string>
+    <string name="status_bt_connected">ब्लूटूथ SPP से कनेक्टेड</string>
+    <string name="status_bt_listening">ब्लूटूथ कनेक्शन की प्रतीक्षा में...</string>
+    <string name="network_local">स्थानीय नेटवर्क (ऑफलाइन)</string>
+    <string name="network_wifi_hotspot">वाई-फाई हॉटस्पॉट</string>
+    <string name="network_bluetooth">ब्लूटूथ RFCOMM</string>
+    <string name="clients_count">%1$d क्लाइंट जुड़े हैं</string>
+
+    <!-- Language Selector Labels -->
+    <string name="label_app_language">ऐप भाषा</string>
+    <string name="label_comm_language">संचार भाषा</string>
+    <string name="lang_english">अंग्रेज़ी</string>
+    <string name="lang_hindi">हिन्दी</string>
+    <string name="lang_gujarati">गुजराती</string>
+    <string name="lang_en_native">English</string>
+    <string name="lang_hi_native">हिन्दी</string>
+    <string name="lang_gu_native">ગુજરાતી</string>
+
+    <!-- Room / Connection Controls -->
+    <string name="label_room">रूम</string>
+    <string name="mode_host">होस्ट</string>
+    <string name="mode_join">ज्वाइन</string>
+    <string name="hint_room_code">रूम कोड (उदा. 482731)</string>
+    <string name="btn_connect">कनेक्ट करें</string>
+    <string name="btn_disconnect">डिस्कनेक्ट करें</string>
+    <string name="btn_generate_code">बनाएं</string>
+
+    <!-- Conversation & Transcript -->
+    <string name="label_conversation">बातचीत</string>
+    <string name="transcript_empty">बोलने के लिए दबाकर रखें। संदेश यहाँ दिखाई देंगे।</string>
+    <string name="label_you">आप</string>
+    <string name="label_received">प्राप्त संदेश</string>
+
+    <!-- Performance & Bandwidth Metrics -->
+    <string name="label_performance">प्रदर्शन मेट्रिक्स</string>
+    <string name="metric_stt">एसटीटी (STT)</string>
+    <string name="metric_network">नेटवर्क</string>
+    <string name="metric_tts">टीटीएस (TTS)</string>
+    <string name="metric_translation">अनुवाद</string>
+    <string name="metric_e2e">E2E विलंबता</string>
+    <string name="metric_payload">पेलोड</string>
+    <string name="metric_raw_pcm">कच्चा PCM</string>
+    <string name="metric_saved">बचत</string>
+    <string name="metric_reduction">कमी</string>
+    <string name="metric_skipped">छोड़ा गया</string>
+    <string name="metric_bytes_saved_format">भेजा गया: %1$d B · PCM: %2$d B (%3$.1f%% बचत)</string>
+
+    <!-- PTT & States -->
+    <string name="btn_hold_to_speak">बोलने के लिए दबाकर रखें</string>
+    <string name="state_ready">तैयार</string>
+    <string name="state_recording">● रिकॉर्डिंग जारी है...</string>
+    <string name="state_processing">प्रोसेसिंग (STT)...</string>
+    <string name="state_sending">पैकेट भेजा जा रहा है...</string>
+    <string name="state_receiving">प्राप्त हो रहा है...</string>
+    <string name="state_playing">ऑडियो चल रहा है (TTS)...</string>
+
+    <!-- Alert System -->
+    <string name="btn_send_alert">अलर्ट भेजें</string>
+    <string name="btn_alert_active">अलर्ट सक्रिय</string>
+    <string name="alert_banner">आपातकालीन अलर्ट प्राप्त हुआ</string>
+
+    <!-- Settings Screen -->
+    <string name="title_settings">सेटिंग्स</string>
+    <string name="section_language">भाषा</string>
+    <string name="section_network">नेटवर्क</string>
+    <string name="pref_transport">प्राथमिक नेटवर्क</string>
+    <string name="transport_wifi">वाई-फाई हॉटस्पॉट (प्राथमिक)</string>
+    <string name="transport_bluetooth">ब्लूटूथ क्लासिक RFCOMM (बैकअप)</string>
+    <string name="section_audio">ऑडियो</string>
+    <string name="label_alert_volume">आपातकालीन अलर्ट प्लेबैक</string>
+    <string name="desc_alert_volume">STREAM_ALARM के माध्यम से पूर्ण आवाज़ में और स्क्रीन ऑन करके बजाता है।</string>
+    <string name="section_models">लोकल एआई मॉडल</string>
+    <string name="model_installed">इंस्टॉल किया हुआ</string>
+    <string name="model_not_installed">मॉडल इंस्टॉल नहीं है</string>
+    <string name="model_bundled">एपीके में शामिल</string>
+    <string name="model_loading">मॉडल लोड हो रहा है...</string>
+    <string name="model_ready">तैयार</string>
+    <string name="model_error">मॉडल त्रुटि</string>
+    <string name="btn_download">डाउनलोड करें</string>
+    <string name="btn_remove">हटाएं</string>
+    <string name="section_about">के बारे में</string>
+    <string name="about_title">iTantra — न्यूरल वॉइस ट्रांसीवर</string>
+    <string name="about_desc">स्मार्ट इंडिया हैकाथॉन 2024 · समस्या ID: 26173\nकम बिटरेट लिंक के लिए भारतीय बहुभाषी TTS और STT समर्थित न्यूरल ट्रांसीवर\nटीम DEPSTAR · CHARUSAT</string>
+
+    <!-- Error & Validation Messages -->
+    <string name="err_mic_permission">आवाज़ रिकॉर्ड करने के लिए माइक्रोफ़ोन की अनुमति आवश्यक है।</string>
+    <string name="err_bluetooth_permission">ब्लूटूथ बैकअप मोड के लिए अनुमति आवश्यक है।</string>
+    <string name="err_enter_room_code">कृपया एक मान्य रूम कोड दर्ज करें।</string>
+    <string name="err_connection_failed">कनेक्शन विफल। वाई-फाई हॉटस्पॉट या ब्लूटूथ जांचें।</string>
+    <string name="err_bluetooth_unavailable">इस डिवाइस पर ब्लूटूथ उपलब्ध या चालू नहीं है।</string>
+    <string name="err_model_missing_comm">%1$s मॉडल इंस्टॉल नहीं है। कृपया मॉडल डाउनलोड करें।</string>
+    <string name="err_stt_failed">ध्वनि पहचान (STT) विफल रही।</string>
+    <string name="err_tts_failed">ध्वनि संश्लेषण (TTS) विफल रहा।</string>
+    <string name="err_translation_failed">अनुवाद विफल रहा।</string>
+    <string name="err_packet_malformed">अमान्य या विकृत पैकेट प्राप्त हुआ।</string>
+    <string name="err_storage_insufficient">मॉडल डाउनलोड करने के लिए पर्याप्त मेमोरी नहीं है।</string>
+    <string name="msg_alert_sent">आपातकालीन अलर्ट प्रसारित किया गया!</string>
+    <string name="msg_cannot_speak_disconnected">बोलने के लिए पहले रूम से कनेक्ट करें।</string>
+
+    <!-- Common UI -->
+    <string name="dialog_ok">ठीक है</string>
+    <string name="dialog_cancel">रद्द करें</string>
+</resources>

@@ -1,0 +1,550 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_screen">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="24dp">
+
+            <!-- Top App Header -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_alignParentStart="true"
+                    android:layout_toStartOf="@id/btnOpenSettings">
+
+                    <TextView
+                        android:id="@+id/tvAppTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_name"
+                        android:textColor="@color/primary_blue"
+                        android:textSize="26sp"
+                        android:textStyle="bold"
+                        android:fontFamily="sans-serif-black"/>
+
+                    <TextView
+                        android:id="@+id/tvAppSubtitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/app_subtitle"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:textStyle="normal"/>
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/btnOpenSettings"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/title_settings"
+                    android:src="@android:drawable/ic_menu_preferences"
+                    app:tint="@color/text_secondary" />
+            </RelativeLayout>
+
+            <!-- Network Status Bar & Offline Indicator -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:id="@+id/tvConnectionBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_disconnected"
+                    android:text="@string/status_disconnected"
+                    android:textColor="@color/state_gray"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvNetworkType"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/network_wifi_hotspot"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"/>
+
+                <TextView
+                    android:id="@+id/tvLocalNetworkBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_badge_local"
+                    android:text="@string/network_local"
+                    android:textColor="@color/primary_blue"
+                    android:textSize="10sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- Emergency Alert Banner (Shown when alert received) -->
+            <TextView
+                android:id="@+id/tvAlertBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_alert_active_btn"
+                android:text="@string/alert_banner"
+                android:textColor="@color/text_inverse"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:padding="8dp"
+                android:layout_marginBottom="10dp"
+                android:visibility="gone"/>
+
+            <!-- Languages Card: UI Language vs Communication Language -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <!-- Communication Language -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginEnd="6dp">
+
+                            <TextView
+                                android:id="@+id/tvLabelCommLang"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_comm_language"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="4dp"/>
+
+                            <Spinner
+                                android:id="@+id/spinnerCommLang"
+                                android:layout_width="match_parent"
+                                android:layout_height="44dp"
+                                android:background="@drawable/bg_selector_box"/>
+                        </LinearLayout>
+
+                        <!-- App UI Language -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:layout_marginStart="6dp">
+
+                            <TextView
+                                android:id="@+id/tvLabelAppLang"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_app_language"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="4dp"/>
+
+                            <Spinner
+                                android:id="@+id/spinnerAppLang"
+                                android:layout_width="match_parent"
+                                android:layout_height="44dp"
+                                android:background="@drawable/bg_selector_box"/>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Model Status Indicator -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="8dp">
+
+                        <TextView
+                            android:id="@+id/tvModelStatusBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/model_loading"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace"/>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1"/>
+
+                        <TextView
+                            android:id="@+id/tvEngineInfo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="IndicConformer · CPU"
+                            android:textColor="@color/text_muted"
+                            android:textSize="11sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ROOM Card (HOST / JOIN) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <!-- Mode Toggle Buttons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="42dp"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="10dp">
+
+                        <Button
+                            android:id="@+id/btnHostMode"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:text="@string/mode_host"
+                            android:textColor="@color/text_inverse"
+                            android:backgroundTint="@color/primary_blue"
+                            android:layout_marginEnd="4dp"
+                            style="@style/Widget.MaterialComponents.Button"/>
+
+                        <Button
+                            android:id="@+id/btnJoinMode"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:text="@string/mode_join"
+                            android:textColor="@color/text_secondary"
+                            android:backgroundTint="@color/bg_card_secondary"
+                            android:layout_marginStart="4dp"
+                            style="@style/Widget.MaterialComponents.Button"/>
+                    </LinearLayout>
+
+                    <!-- Room Code Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <EditText
+                            android:id="@+id/etRoomCode"
+                            android:layout_width="0dp"
+                            android:layout_height="48dp"
+                            android:layout_weight="1"
+                            android:hint="@string/hint_room_code"
+                            android:textColor="@color/text_primary"
+                            android:textColorHint="@color/text_muted"
+                            android:background="@drawable/bg_input_field"
+                            android:inputType="number"
+                            android:maxLength="8"
+                            android:textSize="15sp"
+                            android:fontFamily="monospace"
+                            android:layout_marginEnd="8dp"/>
+
+                        <Button
+                            android:id="@+id/btnGenerateCode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:text="@string/btn_generate_code"
+                            android:textColor="@color/primary_blue"
+                            android:backgroundTint="@color/primary_blue_light"
+                            style="@style/Widget.MaterialComponents.Button"/>
+                    </LinearLayout>
+
+                    <!-- Connect / Disconnect Action Button -->
+                    <Button
+                        android:id="@+id/btnConnect"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:text="@string/btn_connect"
+                        android:textColor="@color/text_inverse"
+                        android:backgroundTint="@color/primary_blue"
+                        android:textStyle="bold"
+                        style="@style/Widget.MaterialComponents.Button"/>
+
+                    <!-- Detailed Status info -->
+                    <TextView
+                        android:id="@+id/tvRoomStatusDetail"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/status_disconnected"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:gravity="center"
+                        android:layout_marginTop="8dp"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- CONVERSATION Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/tvLabelConversation"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_conversation"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <!-- Conversation History Box -->
+                    <androidx.core.widget.NestedScrollView
+                        android:id="@+id/scrollTranscript"
+                        android:layout_width="match_parent"
+                        android:layout_height="130dp"
+                        android:background="@drawable/bg_metric_tile"
+                        android:padding="10dp">
+
+                        <LinearLayout
+                            android:id="@+id/layoutTranscriptContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTranscriptEmpty"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/transcript_empty"
+                                android:textColor="@color/text_muted"
+                                android:textSize="13sp"
+                                android:gravity="center"/>
+
+                            <TextView
+                                android:id="@+id/tvTranscriptYou"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:layout_marginBottom="4dp"
+                                android:visibility="gone"/>
+
+                            <TextView
+                                android:id="@+id/tvTranscriptReceived"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/primary_blue_dark"
+                                android:textSize="14sp"
+                                android:visibility="gone"/>
+                        </LinearLayout>
+                    </androidx.core.widget.NestedScrollView>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- PERFORMANCE & BANDWIDTH METRICS Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                app:cardBackgroundColor="@color/bg_card"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/tvLabelPerformance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_performance"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <!-- Grid of Latency metrics -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="6dp">
+
+                        <TextView
+                            android:id="@+id/tvMetricStt"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="STT: -- ms"
+                            android:textColor="@color/state_green"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"/>
+
+                        <TextView
+                            android:id="@+id/tvMetricNet"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Net: -- ms"
+                            android:textColor="@color/primary_blue"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"/>
+
+                        <TextView
+                            android:id="@+id/tvMetricTts"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="TTS: -- ms"
+                            android:textColor="@color/state_orange"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginBottom="8dp">
+
+                        <TextView
+                            android:id="@+id/tvMetricTrans"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Trans: --"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:fontFamily="monospace"/>
+
+                        <TextView
+                            android:id="@+id/tvMetricE2e"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="2"
+                            android:text="E2E: -- s"
+                            android:textColor="@color/state_orange"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:fontFamily="monospace"/>
+                    </LinearLayout>
+
+                    <!-- Bandwidth Comparison -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/border_card"
+                        android:layout_marginBottom="6dp"/>
+
+                    <TextView
+                        android:id="@+id/tvMetricBandwidth"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Payload: -- B · Raw PCM: -- B (0% saved)"
+                        android:textColor="@color/primary_blue"
+                        android:textSize="12sp"
+                        android:fontFamily="monospace"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- State Pill -->
+            <TextView
+                android:id="@+id/tvPttState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="@string/state_ready"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp"/>
+
+            <!-- HOLD TO SPEAK BUTTON -->
+            <Button
+                android:id="@+id/btnPtt"
+                android:layout_width="match_parent"
+                android:layout_height="80dp"
+                android:text="@string/btn_hold_to_speak"
+                android:textColor="@color/text_inverse"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:background="@drawable/bg_ptt_idle"
+                app:backgroundTint="@null"
+                android:elevation="4dp"
+                android:layout_marginBottom="12dp"/>
+
+            <!-- SEND ALERT BUTTON -->
+            <Button
+                android:id="@+id/btnAlert"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:text="@string/btn_send_alert"
+                android:textColor="@color/state_red"
+                android:textStyle="bold"
+                android:background="@drawable/bg_alert_btn"
+                app:backgroundTint="@null"
+                android:elevation="0dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
