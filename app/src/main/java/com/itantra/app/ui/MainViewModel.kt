@@ -14,14 +14,17 @@ import com.itantra.app.data.AppLanguage
 import com.itantra.app.data.CommunicationLanguage
 import com.itantra.app.data.ConnectionState
 import com.itantra.app.data.Message
+import com.itantra.app.data.ModelInfo
 import com.itantra.app.data.PerformanceMetrics
 import com.itantra.app.data.RecordingState
+import com.itantra.app.data.VoiceOption
 import com.itantra.app.localization.AppLanguageManager
 import com.itantra.app.ml.CoquiTtsEngine
 import com.itantra.app.ml.IndicConformerSttEngine
 import com.itantra.app.ml.IndicTtsEngine
 import com.itantra.app.ml.ModelManager
 import com.itantra.app.ml.SpeechToTextEngine
+import com.itantra.app.ml.SystemTtsEngine
 import com.itantra.app.ml.TextToSpeechEngine
 import com.itantra.app.ml.TranslationEngine
 import com.itantra.app.ml.WhisperSttEngine
@@ -38,9 +41,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val TAG = "MainViewModel"
+        private const val PREFS_NAME = "itantra_prefs"
+        private const val KEY_VOICE_ID = "selected_voice_id"
+        private const val KEY_TRANSPORT_BT = "transport_bluetooth"
     }
 
     private val context = application.applicationContext
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Application.MODE_PRIVATE)
 
     // Core Managers & Engines
     val modelManager = ModelManager(context)
@@ -54,10 +61,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val indicTtsEngine = IndicTtsEngine(context, modelManager)
     private val coquiTtsEngine = CoquiTtsEngine(context, modelManager)
     private val translationEngine = TranslationEngine(context, modelManager)
+    val systemTtsEngine = SystemTtsEngine(context)
 
     // Transports
-    private val tcpTransport = TcpTransport()
-    private val bluetoothTransport = BluetoothTransport()
+    val tcpTransport = TcpTransport()
+    val bluetoothTransport = BluetoothTransport()
     private var currentTransport: NetworkTransport = tcpTransport
 
     private val latencyTracker = LatencyTracker()
@@ -108,7 +116,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _statusMessage = MutableLiveData("")
     val statusMessage: LiveData<String> = _statusMessage
 
+    // Voice & Audio Configuration
+    private val _selectedVoice = MutableLiveData(VoiceOption.fromId(prefs.getString(KEY_VOICE_ID, VoiceOption.PRIYA.id)))
+    val selectedVoice: LiveData<VoiceOption> = _selectedVoice
+
+    // Transport (Hotspot vs Bluetooth P2P)
+    private val _isBluetoothTransport = MutableLiveData(prefs.getBoolean(KEY_TRANSPORT_BT, false))
+    val isBluetoothTransport: LiveData<Boolean> = _isBluetoothTransport
+
+    private val _selectedBluetoothDeviceName = MutableLiveData<String>("No device selected")
+    val selectedBluetoothDeviceName: LiveData<String> = _selectedBluetoothDeviceName
+    var selectedBluetoothAddress: String? = null
+
+    // Live Model Download Tracker
+    private val _downloadingModelName = MutableLiveData<String?>(null)
+    val downloadingModelName: LiveData<String?> = _downloadingModelName
+
+    private val _downloadProgressPercent = MutableLiveData<Int>(0)
+    val downloadProgressPercent: LiveData<Int> = _downloadProgressPercent
+
     init {
+        // Apply initial transport
+        val useBt = prefs.getBoolean(KEY_TRANSPORT_BT, false)
+        setTransportType(!useBt)
+
+        // Apply initial voice speaker ID
+        val voice = _selectedVoice.value ?: VoiceOption.PRIYA
+        indicTtsEngine.currentSpeakerId = voice.speakerId
+
         checkCurrentModelStatus()
     }
 
@@ -122,10 +157,62 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setTransportType(useWifi: Boolean) {
         disconnect()
+        _isBluetoothTransport.value = !useWifi
         currentTransport = if (useWifi) tcpTransport else bluetoothTransport
+        prefs.edit().putBoolean(KEY_TRANSPORT_BT, !useWifi).apply()
+        _connectionDetail.value = if (useWifi) "Wi-Fi Hotspot mode" else "Bluetooth P2P mode"
     }
 
     fun getTransportName(): String = currentTransport.getTransportName()
+
+    fun getPairedBluetoothDevices(): List<Pair<String, String>> {
+        return bluetoothTransport.getPairedDevices().map { device ->
+            try {
+                val name = device.name ?: "Unknown Device"
+                val address = device.address ?: ""
+                Pair(name, address)
+            } catch (e: Exception) {
+                Pair("Peer Device", device.address ?: "")
+            }
+        }
+    }
+
+    fun selectBluetoothDevice(name: String, address: String) {
+        selectedBluetoothAddress = address
+        _selectedBluetoothDeviceName.value = name
+        _connectionDetail.value = "Selected peer: $name ($address)"
+    }
+
+    fun setVoiceOption(voice: VoiceOption) {
+        _selectedVoice.value = voice
+        indicTtsEngine.currentSpeakerId = voice.speakerId
+        prefs.edit().putString(KEY_VOICE_ID, voice.id).apply()
+    }
+
+    fun previewVoice(voice: VoiceOption, customText: String? = null) {
+        val lang = _commLanguage.value ?: CommunicationLanguage.HINDI
+        val sampleText = customText ?: when (lang) {
+            CommunicationLanguage.HINDI -> "नमस्ते! iTantra में आपका स्वागत है। यह ${voice.name} की आवाज़ है।"
+            CommunicationLanguage.GUJARATI -> "નમસ્તે! iTantra માં આપનું સ્વાગત છે. આ ${voice.name} નો અવાજ છે."
+            CommunicationLanguage.ENGLISH -> "Hello! Welcome to iTantra. This is the ${voice.name} voice."
+        }
+
+        systemTtsEngine.speak(
+            text = sampleText,
+            language = lang,
+            voiceOption = voice,
+            onStart = {
+                viewModelScope.launch(Dispatchers.Main) {
+                    _recordingState.value = RecordingState.PLAYING
+                }
+            },
+            onDone = {
+                viewModelScope.launch(Dispatchers.Main) {
+                    _recordingState.value = RecordingState.READY
+                }
+            }
+        )
+    }
 
     fun setCommunicationLanguage(lang: CommunicationLanguage) {
         _commLanguage.value = lang
@@ -147,6 +234,72 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Downloads models for the currently active communication language.
+     */
+    fun downloadCurrentLanguageModels(onComplete: (Boolean, String?) -> Unit) {
+        val lang = _commLanguage.value ?: CommunicationLanguage.HINDI
+        val models = modelManager.getAllModelsStatus().filter {
+            it.fileName == lang.sttModelFile || it.fileName == lang.ttsModelFile
+        }
+
+        viewModelScope.launch {
+            for (model in models) {
+                if (!model.isInstalled) {
+                    _downloadingModelName.value = model.name
+                    var success = false
+                    var error: String? = null
+
+                    modelManager.downloadModel(
+                        model = model,
+                        onProgress = { percent, _, _ ->
+                            _downloadProgressPercent.value = percent
+                        },
+                        onResult = { s, e ->
+                            success = s
+                            error = e
+                        }
+                    )
+
+                    if (!success) {
+                        _downloadingModelName.value = null
+                        _downloadProgressPercent.value = 0
+                        onComplete(false, error ?: "Download failed for ${model.name}")
+                        return@launch
+                    }
+                }
+            }
+
+            _downloadingModelName.value = null
+            _downloadProgressPercent.value = 100
+            checkCurrentModelStatus()
+            onComplete(true, null)
+        }
+    }
+
+    /**
+     * Downloads an individual model with live progress updates.
+     */
+    fun downloadModel(model: ModelInfo, onComplete: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _downloadingModelName.value = model.name
+            _downloadProgressPercent.value = 0
+
+            modelManager.downloadModel(
+                model = model,
+                onProgress = { percent, _, _ ->
+                    _downloadProgressPercent.value = percent
+                },
+                onResult = { success, errorMsg ->
+                    _downloadingModelName.value = null
+                    _downloadProgressPercent.value = if (success) 100 else 0
+                    checkCurrentModelStatus()
+                    onComplete(success, errorMsg)
+                }
+            )
+        }
+    }
+
     fun toggleAlertMode() {
         val current = _isAlertActive.value ?: false
         _isAlertActive.value = !current
@@ -155,6 +308,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun connect() {
         val code = _roomCode.value?.trim() ?: "482731"
         val isHost = _isHostMode.value ?: true
+        val isBt = _isBluetoothTransport.value ?: false
 
         if (isHost) {
             currentTransport.startHost(
@@ -168,9 +322,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             )
         } else {
+            val hostTarget = if (isBt) {
+                selectedBluetoothAddress ?: ""
+            } else {
+                TcpTransport.DEFAULT_HOTSPOT_HOST_IP
+            }
+
             currentTransport.joinRoom(
                 roomCode = code,
-                hostAddress = TcpTransport.DEFAULT_HOTSPOT_HOST_IP,
+                hostAddress = hostTarget,
                 onMessageReceived = { msg -> handleIncomingMessage(msg) },
                 onStateChanged = { state, detail ->
                     viewModelScope.launch(Dispatchers.Main) {
@@ -323,6 +483,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _recordingState.value = RecordingState.PLAYING
             }
 
+            val voice = _selectedVoice.value ?: VoiceOption.PRIYA
+            indicTtsEngine.currentSpeakerId = voice.speakerId
+
             val ttsEngine: TextToSpeechEngine = if (myCommLang == CommunicationLanguage.ENGLISH) {
                 coquiTtsEngine
             } else {
@@ -334,22 +497,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val ttsDuration = System.currentTimeMillis() - ttsStart
             latencyTracker.recordTts(ttsDuration)
 
-            // Step 3: Audio Playback via AudioTrack
-            audioPlayer.playAudio(
-                audioData = audioWaveform,
-                isAlert = message.isAlert,
-                sampleRate = ttsEngine.getSampleRate(),
-                onPlaybackFinished = {
-                    viewModelScope.launch(Dispatchers.Main) {
-                        _recordingState.value = RecordingState.READY
+            // Step 3: Audio Playback (ONNX AudioTrack or System TTS Fallback)
+            if (audioWaveform.isNotEmpty()) {
+                audioPlayer.playAudio(
+                    audioData = audioWaveform,
+                    isAlert = message.isAlert,
+                    sampleRate = ttsEngine.getSampleRate(),
+                    onPlaybackFinished = {
+                        viewModelScope.launch(Dispatchers.Main) {
+                            _recordingState.value = RecordingState.READY
+                        }
                     }
+                )
+            } else {
+                // Fallback to system TTS with chosen voice persona
+                Log.d(TAG, "Playing incoming speech via System TTS persona: ${voice.name}")
+                withContext(Dispatchers.Main) {
+                    systemTtsEngine.speak(
+                        text = textToSynthesize,
+                        language = myCommLang,
+                        voiceOption = voice,
+                        onDone = {
+                            viewModelScope.launch(Dispatchers.Main) {
+                                _recordingState.value = RecordingState.READY
+                            }
+                        }
+                    )
                 }
-            )
+            }
 
             // Step 4: Update UI Performance Metrics
             val totalE2e = latencyTracker.calculateE2e()
             val payloadBytes = PacketMetrics.calculatePayloadBytes(com.google.gson.Gson().toJson(message))
-            val rawPcmBytes = PacketMetrics.calculateRawPcmBytes(audioWaveform.size)
+            val rawPcmBytes = if (audioWaveform.isNotEmpty()) {
+                PacketMetrics.calculateRawPcmBytes(audioWaveform.size)
+            } else {
+                textToSynthesize.length * 1600
+            }
             val reductionPercent = PacketMetrics.calculateReductionPercent(rawPcmBytes, payloadBytes)
 
             withContext(Dispatchers.Main) {
@@ -376,6 +560,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         audioCapture.stopCapture()
         audioPlayer.stopCurrentPlayback()
+        systemTtsEngine.close()
         indicSttEngine.close()
         whisperSttEngine.close()
         indicTtsEngine.close()

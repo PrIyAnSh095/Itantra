@@ -8,7 +8,10 @@ data class ModelInfo(
     val isInstalled: Boolean,
     val isBundled: Boolean,
     val languageCode: String,
-    val type: ModelType
+    val type: ModelType,
+    val downloadUrl: String? = null,
+    val downloadState: ModelDownloadState = ModelDownloadState.IDLE,
+    val downloadProgress: Int = 0
 )
 
 enum class ModelType {
@@ -16,6 +19,13 @@ enum class ModelType {
     STT,
     TTS,
     TRANSLATION
+}
+
+enum class ModelDownloadState {
+    IDLE,
+    DOWNLOADING,
+    INSTALLED,
+    ERROR
 }
 
 data class PerformanceMetrics(

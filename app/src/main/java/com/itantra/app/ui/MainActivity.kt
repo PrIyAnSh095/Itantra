@@ -6,12 +6,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.provider.Settings
 import android.view.MotionEvent
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.itantra.app.R
@@ -19,6 +21,7 @@ import com.itantra.app.data.AppLanguage
 import com.itantra.app.data.CommunicationLanguage
 import com.itantra.app.data.ConnectionState
 import com.itantra.app.data.RecordingState
+import com.itantra.app.data.VoiceOption
 import com.itantra.app.databinding.ActivityMainBinding
 import com.itantra.app.localization.AppLanguageManager
 import com.itantra.app.utils.PermissionManager
@@ -43,6 +46,9 @@ class MainActivity : AppCompatActivity() {
 
         setupSpinners()
         setupButtons()
+        setupTransportToggle()
+        setupVoiceControls()
+        setupModelDownload()
         observeViewModel()
     }
 
@@ -79,6 +85,141 @@ class MainActivity : AppCompatActivity() {
                 viewModel.setCommunicationLanguage(selected)
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
+    }
+
+    private fun setupTransportToggle() {
+        binding.btnTransportWifi.setOnClickListener {
+            viewModel.setTransportType(useWifi = true)
+            updateTransportButtons(useWifi = true)
+        }
+
+        binding.btnTransportBt.setOnClickListener {
+            if (!PermissionManager.hasBluetoothPermission(this)) {
+                PermissionManager.requestAppPermissions(this)
+            }
+            viewModel.setTransportType(useWifi = false)
+            updateTransportButtons(useWifi = false)
+        }
+
+        binding.btnSelectBtPeer.setOnClickListener {
+            showBluetoothDevicePicker()
+        }
+    }
+
+    private fun updateTransportButtons(useWifi: Boolean) {
+        val activeBg = ContextCompat.getColor(this, R.color.primary_blue)
+        val inactiveBg = ContextCompat.getColor(this, R.color.bg_card_secondary)
+        val activeText = ContextCompat.getColor(this, R.color.text_inverse)
+        val inactiveText = ContextCompat.getColor(this, R.color.text_secondary)
+
+        if (useWifi) {
+            binding.btnTransportWifi.backgroundTintList = ColorStateList.valueOf(activeBg)
+            binding.btnTransportWifi.setTextColor(activeText)
+            binding.btnTransportBt.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+            binding.btnTransportBt.setTextColor(inactiveText)
+            binding.tvNetworkType.text = getString(R.string.network_wifi_hotspot)
+            binding.btnSelectBtPeer.visibility = View.GONE
+        } else {
+            binding.btnTransportBt.backgroundTintList = ColorStateList.valueOf(activeBg)
+            binding.btnTransportBt.setTextColor(activeText)
+            binding.btnTransportWifi.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+            binding.btnTransportWifi.setTextColor(inactiveText)
+            binding.tvNetworkType.text = "Bluetooth Classic P2P"
+
+            val isHost = viewModel.isHostMode.value ?: true
+            binding.btnSelectBtPeer.visibility = if (!isHost) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun showBluetoothDevicePicker() {
+        val devices = viewModel.getPairedBluetoothDevices()
+        if (devices.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle("No Paired Bluetooth Devices")
+                .setMessage("No paired phones were found. Please pair phones with each other in Android Bluetooth Settings first.")
+                .setPositiveButton("Open Bluetooth Settings") { _, _ ->
+                    startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
+                }
+                .setNegativeButton(R.string.dialog_cancel, null)
+                .show()
+            return
+        }
+
+        val deviceNames = devices.map { "${it.first} (${it.second})" }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("Select Paired Peer Phone")
+            .setItems(deviceNames) { _, index ->
+                val selected = devices[index]
+                viewModel.selectBluetoothDevice(name = selected.first, address = selected.second)
+                binding.btnSelectBtPeer.text = "📱 Peer: ${selected.first}"
+                Toast.makeText(this, "Selected ${selected.first} as Bluetooth peer", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    private fun setupVoiceControls() {
+        binding.tvActiveVoiceName.text = viewModel.selectedVoice.value?.displayLabel ?: "Priya (Female)"
+
+        binding.btnPreviewVoiceMain.setOnClickListener {
+            val currentVoice = viewModel.selectedVoice.value ?: VoiceOption.PRIYA
+            Toast.makeText(this, "Previewing ${currentVoice.name} voice...", Toast.LENGTH_SHORT).show()
+            viewModel.previewVoice(currentVoice)
+        }
+
+        binding.btnChangeVoice.setOnClickListener {
+            showVoicePicker()
+        }
+    }
+
+    private fun showVoicePicker() {
+        val voices = VoiceOption.ALL_VOICES
+        val voiceItems = voices.map { "${it.name} (${if (it.gender == com.itantra.app.data.VoiceGender.FEMALE) "Female" else "Male"}) · ${it.description}" }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Select Voice Persona")
+            .setItems(voiceItems) { _, index ->
+                val chosenVoice = voices[index]
+                viewModel.setVoiceOption(chosenVoice)
+                binding.tvActiveVoiceName.text = chosenVoice.displayLabel
+                Toast.makeText(this, "Voice set to ${chosenVoice.name}", Toast.LENGTH_SHORT).show()
+                viewModel.previewVoice(chosenVoice)
+            }
+            .setNegativeButton(R.string.dialog_cancel, null)
+            .show()
+    }
+
+    private fun setupModelDownload() {
+        binding.btnInstallModel.setOnClickListener {
+            val currentLang = viewModel.commLanguage.value ?: CommunicationLanguage.HINDI
+            AlertDialog.Builder(this)
+                .setTitle("Download Voice Model Pack")
+                .setMessage("Download offline STT and TTS neural models for ${currentLang.displayName}? (Total ~120 MB)\n\nOnce downloaded, voice recognition and speech playback run 100% offline on-device.")
+                .setPositiveButton("Download Now") { _, _ ->
+                    binding.btnInstallModel.isEnabled = false
+                    binding.btnInstallModel.text = "Downloading..."
+                    binding.layoutMainDownloadProgress.visibility = View.VISIBLE
+                    binding.pbMainDownload.progress = 0
+                    binding.tvMainDownloadPercent.text = "0%"
+
+                    viewModel.downloadCurrentLanguageModels { success, errorMsg ->
+                        binding.layoutMainDownloadProgress.visibility = View.GONE
+                        binding.btnInstallModel.isEnabled = true
+                        if (success) {
+                            Toast.makeText(this, "${currentLang.displayName} models installed successfully!", Toast.LENGTH_SHORT).show()
+                            binding.btnInstallModel.visibility = View.GONE
+                        } else {
+                            Toast.makeText(this, "Download failed: $errorMsg", Toast.LENGTH_LONG).show()
+                            binding.btnInstallModel.text = "Retry Download"
+                        }
+                    }
+                }
+                .setNegativeButton("Manage in Settings") { _, _ ->
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                }
+                .setNeutralButton(R.string.dialog_cancel, null)
+                .show()
         }
     }
 
@@ -162,18 +303,22 @@ class MainActivity : AppCompatActivity() {
         val activeText = ContextCompat.getColor(this, R.color.text_inverse)
         val inactiveText = ContextCompat.getColor(this, R.color.text_secondary)
 
+        val isBt = viewModel.isBluetoothTransport.value ?: false
+
         if (isHost) {
             binding.btnHostMode.backgroundTintList = ColorStateList.valueOf(activeBg)
             binding.btnHostMode.setTextColor(activeText)
             binding.btnJoinMode.backgroundTintList = ColorStateList.valueOf(inactiveBg)
             binding.btnJoinMode.setTextColor(inactiveText)
             binding.btnGenerateCode.visibility = View.VISIBLE
+            binding.btnSelectBtPeer.visibility = View.GONE
         } else {
             binding.btnJoinMode.backgroundTintList = ColorStateList.valueOf(activeBg)
             binding.btnJoinMode.setTextColor(activeText)
             binding.btnHostMode.backgroundTintList = ColorStateList.valueOf(inactiveBg)
             binding.btnHostMode.setTextColor(inactiveText)
             binding.btnGenerateCode.visibility = View.GONE
+            binding.btnSelectBtPeer.visibility = if (isBt) View.VISIBLE else View.GONE
         }
     }
 
@@ -203,6 +348,7 @@ class MainActivity : AppCompatActivity() {
                     binding.btnConnect.text = getString(R.string.btn_connect)
                     binding.btnConnect.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary_blue))
                     binding.tvRoomStatusDetail.text = getString(R.string.status_disconnected)
+                    binding.btnPtt.isEnabled = false
                 }
                 ConnectionState.ERROR -> {
                     binding.tvConnectionBadge.setBackgroundResource(R.drawable.bg_badge_disconnected)
@@ -210,6 +356,7 @@ class MainActivity : AppCompatActivity() {
                     binding.tvConnectionBadge.setTextColor(ContextCompat.getColor(this, R.color.state_red))
                     binding.btnConnect.text = getString(R.string.btn_connect)
                     binding.btnConnect.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.primary_blue))
+                    binding.btnPtt.isEnabled = false
                 }
                 else -> {}
             }
@@ -312,7 +459,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // Model Status
+        // Model Status & Download Option
         viewModel.modelStatus.observe(this) { status ->
             binding.tvModelStatusBadge.text = status
         }
@@ -320,9 +467,34 @@ class MainActivity : AppCompatActivity() {
         viewModel.isCommModelReady.observe(this) { ready ->
             if (ready) {
                 binding.tvModelStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.state_green))
+                binding.btnInstallModel.visibility = View.GONE
             } else {
                 binding.tvModelStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.state_orange))
+                binding.btnInstallModel.visibility = View.VISIBLE
+                val lang = viewModel.commLanguage.value?.displayName ?: "Hindi"
+                binding.btnInstallModel.text = "📥 Download $lang Model"
             }
+        }
+
+        // Live Download Progress on Main Screen
+        viewModel.downloadProgressPercent.observe(this) { percent ->
+            if (percent in 1..99) {
+                binding.layoutMainDownloadProgress.visibility = View.VISIBLE
+                binding.pbMainDownload.progress = percent
+                binding.tvMainDownloadPercent.text = "$percent%"
+            } else if (percent == 100) {
+                binding.layoutMainDownloadProgress.visibility = View.GONE
+            }
+        }
+
+        // Voice Option Updates
+        viewModel.selectedVoice.observe(this) { voice ->
+            binding.tvActiveVoiceName.text = voice.displayLabel
+        }
+
+        // Transport Mode Updates
+        viewModel.isBluetoothTransport.observe(this) { isBt ->
+            updateTransportButtons(!isBt)
         }
 
         // Room Code Sync
@@ -346,6 +518,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.checkCurrentModelStatus()
-        binding.tvNetworkType.text = viewModel.getTransportName()
+        val isBt = viewModel.isBluetoothTransport.value ?: false
+        updateTransportButtons(!isBt)
     }
 }

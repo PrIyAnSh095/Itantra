@@ -10,18 +10,23 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.itantra.app.data.CommunicationLanguage
+import com.itantra.app.data.ModelDownloadState
 import com.itantra.app.data.ModelInfo
 import com.itantra.app.data.ModelType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Manages on-device model discovery, storage paths, validation,
- * and background download via Android WorkManager.
+ * live downloading with progress tracking, and storage management.
  */
 class ModelManager(private val context: Context) {
 
@@ -38,7 +43,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = true,
                 languageCode = "all",
-                type = ModelType.VAD
+                type = ModelType.VAD,
+                downloadUrl = "https://github.com/snakers4/silero-vad/raw/master/files/silero_vad.tflite"
             ),
             ModelInfo(
                 id = "stt_hi",
@@ -48,7 +54,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "hi",
-                type = ModelType.STT
+                type = ModelType.STT,
+                downloadUrl = "https://huggingface.co/ai4bharat/indicconformer-hi-onnx/resolve/main/model.onnx"
             ),
             ModelInfo(
                 id = "tts_hi",
@@ -58,7 +65,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "hi",
-                type = ModelType.TTS
+                type = ModelType.TTS,
+                downloadUrl = "https://huggingface.co/ai4bharat/indic-tts-hi-onnx/resolve/main/model.onnx"
             ),
             ModelInfo(
                 id = "stt_en",
@@ -68,7 +76,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "en",
-                type = ModelType.STT
+                type = ModelType.STT,
+                downloadUrl = "https://huggingface.co/openai/whisper-small-onnx/resolve/main/encoder_model.onnx"
             ),
             ModelInfo(
                 id = "tts_en",
@@ -78,7 +87,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "en",
-                type = ModelType.TTS
+                type = ModelType.TTS,
+                downloadUrl = "https://huggingface.co/coqui/vits-en-onnx/resolve/main/model.onnx"
             ),
             ModelInfo(
                 id = "stt_gu",
@@ -88,7 +98,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "gu",
-                type = ModelType.STT
+                type = ModelType.STT,
+                downloadUrl = "https://huggingface.co/ai4bharat/indicconformer-gu-onnx/resolve/main/model.onnx"
             ),
             ModelInfo(
                 id = "tts_gu",
@@ -98,7 +109,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "gu",
-                type = ModelType.TTS
+                type = ModelType.TTS,
+                downloadUrl = "https://huggingface.co/ai4bharat/indic-tts-gu-onnx/resolve/main/model.onnx"
             ),
             ModelInfo(
                 id = "translation_indic",
@@ -108,7 +120,8 @@ class ModelManager(private val context: Context) {
                 isInstalled = false,
                 isBundled = false,
                 languageCode = "all",
-                type = ModelType.TRANSLATION
+                type = ModelType.TRANSLATION,
+                downloadUrl = "https://huggingface.co/ai4bharat/indictrans2-indic-indic-onnx/resolve/main/model.onnx"
             )
         )
     }
@@ -119,6 +132,10 @@ class ModelManager(private val context: Context) {
             if (!dir.exists()) dir.mkdirs()
             return dir
         }
+
+    // In-memory download tracking
+    private val activeDownloads = ConcurrentHashMap<String, Int>()
+    private val downloadJobs = ConcurrentHashMap<String, Job>()
 
     fun getModelsDirectoryPath(): String = modelsDir.absolutePath
 
@@ -158,17 +175,153 @@ class ModelManager(private val context: Context) {
     }
 
     /**
-     * Returns the list of all models with their current on-disk installation status.
+     * Returns the list of all models with their current on-disk installation status
+     * and active download progress if applicable.
      */
     fun getAllModelsStatus(): List<ModelInfo> {
         return AVAILABLE_MODELS.map { model ->
             val installed = isModelInstalled(model.fileName)
             val file = File(modelsDir, model.fileName)
             val sizeMb = if (file.exists()) (file.length() / (1024 * 1024)).toInt() else model.expectedSizeMb
+
+            val progress = activeDownloads[model.fileName]
+            val state = when {
+                progress != null && progress in 0..99 -> ModelDownloadState.DOWNLOADING
+                installed -> ModelDownloadState.INSTALLED
+                else -> ModelDownloadState.IDLE
+            }
+
             model.copy(
                 isInstalled = installed,
-                expectedSizeMb = if (installed && file.exists()) sizeMb else model.expectedSizeMb
+                expectedSizeMb = if (installed && file.exists()) sizeMb else model.expectedSizeMb,
+                downloadState = state,
+                downloadProgress = progress ?: if (installed) 100 else 0
             )
+        }
+    }
+
+    /**
+     * Downloads a model file directly over HTTP/HTTPS with live percentage callback.
+     */
+    suspend fun downloadModel(
+        model: ModelInfo,
+        onProgress: (percent: Int, downloadedBytes: Long, totalBytes: Long) -> Unit,
+        onResult: (success: Boolean, errorMsg: String?) -> Unit
+    ) {
+        val downloadUrl = model.downloadUrl ?: run {
+            onResult(false, "No download URL available for ${model.name}")
+            return
+        }
+
+        withContext(Dispatchers.IO) {
+            val targetDir = modelsDir
+            val targetFile = File(targetDir, model.fileName)
+            val tempFile = File(targetDir, "${model.fileName}.tmp")
+
+            var connection: HttpURLConnection? = null
+            try {
+                activeDownloads[model.fileName] = 0
+                val url = URL(downloadUrl)
+                connection = url.openConnection() as HttpURLConnection
+                connection.connectTimeout = 20000
+                connection.readTimeout = 45000
+                connection.instanceFollowRedirects = true
+                connection.connect()
+
+                if (connection.responseCode !in 200..299) {
+                    activeDownloads.remove(model.fileName)
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "HTTP ${connection.responseCode}: ${connection.responseMessage}")
+                    }
+                    return@withContext
+                }
+
+                val contentLength = connection.contentLength.toLong()
+                val totalBytes = if (contentLength > 0) contentLength else (model.expectedSizeMb * 1024L * 1024L)
+
+                var totalRead = 0L
+                val buffer = ByteArray(32768)
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalRead += bytesRead
+                            val percent = if (totalBytes > 0) {
+                                ((totalRead * 100) / totalBytes).toInt().coerceIn(0, 99)
+                            } else 50
+
+                            activeDownloads[model.fileName] = percent
+                            withContext(Dispatchers.Main) {
+                                onProgress(percent, totalRead, totalBytes)
+                            }
+                        }
+                        output.flush()
+                    }
+                }
+
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    if (targetFile.exists()) targetFile.delete()
+                    val renamed = tempFile.renameTo(targetFile)
+                    if (renamed) {
+                        activeDownloads.remove(model.fileName)
+                        withContext(Dispatchers.Main) {
+                            onProgress(100, targetFile.length(), targetFile.length())
+                            onResult(true, null)
+                        }
+                    } else {
+                        activeDownloads.remove(model.fileName)
+                        withContext(Dispatchers.Main) {
+                            onResult(false, "Failed to rename temporary file.")
+                        }
+                    }
+                } else {
+                    activeDownloads.remove(model.fileName)
+                    withContext(Dispatchers.Main) {
+                        onResult(false, "Downloaded file is empty.")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Download error for ${model.fileName}: ${e.message}", e)
+                activeDownloads.remove(model.fileName)
+                if (tempFile.exists()) tempFile.delete()
+                withContext(Dispatchers.Main) {
+                    onResult(false, e.message ?: "Download connection error")
+                }
+            } finally {
+                connection?.disconnect()
+            }
+        }
+    }
+
+    /**
+     * Deletes an installed model from local storage.
+     */
+    fun deleteModel(fileName: String): Boolean {
+        val file = File(modelsDir, fileName)
+        return if (file.exists()) {
+            file.delete()
+        } else {
+            false
+        }
+    }
+
+    /**
+     * Imports a model file from an InputStream (e.g. from Storage Access Framework).
+     */
+    fun importModel(inputStream: InputStream, targetFileName: String): Boolean {
+        return try {
+            val targetFile = File(modelsDir, targetFileName)
+            val tempFile = File(modelsDir, "$targetFileName.tmp")
+            FileOutputStream(tempFile).use { output ->
+                inputStream.copyTo(output)
+            }
+            if (targetFile.exists()) targetFile.delete()
+            tempFile.renameTo(targetFile)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error importing model $targetFileName: ${e.message}", e)
+            false
         }
     }
 
@@ -237,11 +390,11 @@ class ModelManager(private val context: Context) {
             return try {
                 val url = URL(downloadUrl)
                 val connection = url.openConnection() as HttpURLConnection
-                connection.connectTimeout = 15000
-                connection.readTimeout = 30000
+                connection.connectTimeout = 20000
+                connection.readTimeout = 45000
                 connection.connect()
 
-                if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                if (connection.responseCode !in 200..299) {
                     return Result.retry()
                 }
 

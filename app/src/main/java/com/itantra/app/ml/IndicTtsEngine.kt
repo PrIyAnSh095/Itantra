@@ -27,6 +27,7 @@ class IndicTtsEngine(
     private val env: OrtEnvironment = OrtEnvironment.getEnvironment()
     private var session: OrtSession? = null
     private var loadedLanguage: CommunicationLanguage? = null
+    var currentSpeakerId: Int = 0
 
     @Synchronized
     fun loadModel(language: CommunicationLanguage): Boolean {
@@ -138,7 +139,7 @@ class IndicTtsEngine(
             if (sidName != null) {
                 val sidTensor = OnnxTensor.createTensor(
                     env,
-                    LongBuffer.wrap(longArrayOf(0L)),
+                    LongBuffer.wrap(longArrayOf(currentSpeakerId.toLong())),
                     longArrayOf(1)
                 )
                 allocatedTensors.add(sidTensor)
