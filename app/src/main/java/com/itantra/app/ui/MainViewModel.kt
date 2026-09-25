@@ -83,7 +83,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _appLanguage = MutableLiveData(AppLanguageManager.getSelectedLanguage(context))
     val appLanguage: LiveData<AppLanguage> = _appLanguage
 
-    private val _commLanguage = MutableLiveData(CommunicationLanguage.HINDI)
+    private val _commLanguage = MutableLiveData(
+        CommunicationLanguage.fromCode(prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code) ?: "hi")
+    )
     val commLanguage: LiveData<CommunicationLanguage> = _commLanguage
 
     private val _isAlertActive = MutableLiveData(false)
@@ -216,6 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setCommunicationLanguage(lang: CommunicationLanguage) {
         _commLanguage.value = lang
+        prefs.edit().putString("comm_language_code", lang.code).apply()
         checkCurrentModelStatus()
     }
 
@@ -275,6 +278,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             checkCurrentModelStatus()
             onComplete(true, null)
         }
+    }
+
+    /**
+     * Immediately creates on-device demo models for current communication language
+     * for instant testing without requiring external download.
+     */
+    fun createDemoModelsForCurrentLanguage(): Boolean {
+        val lang = _commLanguage.value ?: CommunicationLanguage.HINDI
+        val created = modelManager.createDemoModelsForLanguage(lang)
+        checkCurrentModelStatus()
+        return created
     }
 
     /**

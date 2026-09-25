@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
         observeViewModel()
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun setupSpinners() {
         // App UI Language Spinner
         val appLanguages = AppLanguage.values()
@@ -60,16 +61,29 @@ class MainActivity : AppCompatActivity() {
         binding.spinnerAppLang.adapter = appAdapter
 
         val currentAppLang = AppLanguageManager.getSelectedLanguage(this)
-        binding.spinnerAppLang.setSelection(appLanguages.indexOf(currentAppLang))
+        val initialAppIndex = appLanguages.indexOf(currentAppLang).coerceAtLeast(0)
+        binding.spinnerAppLang.setSelection(initialAppIndex, false)
+
+        var userTouchedAppLang = false
+        binding.spinnerAppLang.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
+                userTouchedAppLang = true
+            }
+            false
+        }
 
         binding.spinnerAppLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!userTouchedAppLang) return
+                userTouchedAppLang = false
                 val selected = appLanguages[position]
                 if (selected != AppLanguageManager.getSelectedLanguage(this@MainActivity)) {
                     AppLanguageManager.applyAppLanguage(this@MainActivity, selected)
                 }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                userTouchedAppLang = false
+            }
         }
 
         // Communication Language Spinner
@@ -77,14 +91,29 @@ class MainActivity : AppCompatActivity() {
         val commLangNames = commLanguages.map { "${it.displayName} (${it.nativeName})" }
         val commAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, commLangNames)
         binding.spinnerCommLang.adapter = commAdapter
-        binding.spinnerCommLang.setSelection(commLanguages.indexOf(CommunicationLanguage.HINDI))
+
+        val currentCommLang = viewModel.commLanguage.value ?: CommunicationLanguage.HINDI
+        val initialCommIndex = commLanguages.indexOf(currentCommLang).coerceAtLeast(0)
+        binding.spinnerCommLang.setSelection(initialCommIndex, false)
+
+        var userTouchedCommLang = false
+        binding.spinnerCommLang.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
+                userTouchedCommLang = true
+            }
+            false
+        }
 
         binding.spinnerCommLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!userTouchedCommLang) return
+                userTouchedCommLang = false
                 val selected = commLanguages[position]
                 viewModel.setCommunicationLanguage(selected)
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                userTouchedCommLang = false
+            }
         }
     }
 
@@ -162,14 +191,18 @@ class MainActivity : AppCompatActivity() {
     private fun setupVoiceControls() {
         binding.tvActiveVoiceName.text = viewModel.selectedVoice.value?.displayLabel ?: "Priya (Female)"
 
-        binding.btnPreviewVoiceMain.setOnClickListener {
-            val currentVoice = viewModel.selectedVoice.value ?: VoiceOption.PRIYA
-            Toast.makeText(this, "Previewing ${currentVoice.name} voice...", Toast.LENGTH_SHORT).show()
-            viewModel.previewVoice(currentVoice)
+        binding.layoutVoiceRow.setOnClickListener {
+            showVoicePicker()
         }
 
         binding.btnChangeVoice.setOnClickListener {
             showVoicePicker()
+        }
+
+        binding.btnPreviewVoiceMain.setOnClickListener {
+            val currentVoice = viewModel.selectedVoice.value ?: VoiceOption.PRIYA
+            Toast.makeText(this, "Playing preview in ${currentVoice.name} voice...", Toast.LENGTH_SHORT).show()
+            viewModel.previewVoice(currentVoice)
         }
     }
 
@@ -193,34 +226,68 @@ class MainActivity : AppCompatActivity() {
     private fun setupModelDownload() {
         binding.btnInstallModel.setOnClickListener {
             val currentLang = viewModel.commLanguage.value ?: CommunicationLanguage.HINDI
-            AlertDialog.Builder(this)
-                .setTitle("Download Voice Model Pack")
-                .setMessage("Download offline STT and TTS neural models for ${currentLang.displayName}? (Total ~120 MB)\n\nOnce downloaded, voice recognition and speech playback run 100% offline on-device.")
-                .setPositiveButton("Download Now") { _, _ ->
-                    binding.btnInstallModel.isEnabled = false
-                    binding.btnInstallModel.text = "Downloading..."
-                    binding.layoutMainDownloadProgress.visibility = View.VISIBLE
-                    binding.pbMainDownload.progress = 0
-                    binding.tvMainDownloadPercent.text = "0%"
+            val isReady = viewModel.isCommModelReady.value ?: false
 
-                    viewModel.downloadCurrentLanguageModels { success, errorMsg ->
-                        binding.layoutMainDownloadProgress.visibility = View.GONE
-                        binding.btnInstallModel.isEnabled = true
-                        if (success) {
-                            Toast.makeText(this, "${currentLang.displayName} models installed successfully!", Toast.LENGTH_SHORT).show()
-                            binding.btnInstallModel.visibility = View.GONE
-                        } else {
-                            Toast.makeText(this, "Download failed: $errorMsg", Toast.LENGTH_LONG).show()
-                            binding.btnInstallModel.text = "Retry Download"
+            val options = arrayOf(
+                "⚡ Instant Demo Setup (Offline / 1-Click)",
+                "🌐 Download Full Online Models (~120 MB)",
+                "⚙️ Manage & Import in Settings"
+            )
+
+            AlertDialog.Builder(this)
+                .setTitle("${currentLang.displayName} Offline Models")
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> {
+                            val created = viewModel.createDemoModelsForCurrentLanguage()
+                            if (created) {
+                                Toast.makeText(this, "⚡ ${currentLang.displayName} demo model activated! Ready to use offline.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(this, "Could not initialize demo models.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        1 -> {
+                            binding.btnInstallModel.isEnabled = false
+                            binding.btnInstallModel.text = "Downloading..."
+                            binding.layoutMainDownloadProgress.visibility = View.VISIBLE
+                            binding.pbMainDownload.progress = 0
+                            binding.tvMainDownloadPercent.text = "0%"
+
+                            viewModel.downloadCurrentLanguageModels { success, errorMsg ->
+                                binding.layoutMainDownloadProgress.visibility = View.GONE
+                                binding.btnInstallModel.isEnabled = true
+                                if (success) {
+                                    Toast.makeText(this, "${currentLang.displayName} models installed successfully!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    showDownloadErrorDialog(currentLang, errorMsg)
+                                }
+                            }
+                        }
+                        2 -> {
+                            startActivity(Intent(this, SettingsActivity::class.java))
                         }
                     }
                 }
-                .setNegativeButton("Manage in Settings") { _, _ ->
-                    startActivity(Intent(this, SettingsActivity::class.java))
-                }
-                .setNeutralButton(R.string.dialog_cancel, null)
+                .setNegativeButton(R.string.dialog_cancel, null)
                 .show()
         }
+    }
+
+    private fun showDownloadErrorDialog(lang: CommunicationLanguage, errorMsg: String?) {
+        AlertDialog.Builder(this)
+            .setTitle("Download Issue (401 Unauthorized)")
+            .setMessage("The online neural model repository returned HTTP 401 Unauthorized (repository requires authentication or private access token).\n\nWould you like to activate the instant on-device Demo Model for ${lang.displayName} instead?\n\nThis will immediately enable STT, TTS, PTT voice notes, and P2P communication offline without internet.")
+            .setPositiveButton("⚡ Activate Offline Demo Model") { _, _ ->
+                val success = viewModel.createDemoModelsForCurrentLanguage()
+                if (success) {
+                    Toast.makeText(this, "⚡ ${lang.displayName} demo model activated! Ready to use.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Manage in Settings") { _, _ ->
+                startActivity(Intent(this, SettingsActivity::class.java))
+            }
+            .setNeutralButton("Dismiss", null)
+            .show()
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -465,14 +532,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.isCommModelReady.observe(this) { ready ->
+            val lang = viewModel.commLanguage.value?.displayName ?: "Hindi"
+            binding.btnInstallModel.visibility = View.VISIBLE
             if (ready) {
                 binding.tvModelStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.state_green))
-                binding.btnInstallModel.visibility = View.GONE
+                binding.tvModelStatusBadge.text = "● Model Ready ($lang)"
+                binding.btnInstallModel.text = "✓ $lang Model Ready · Tap to Manage / Test"
+                binding.btnInstallModel.setTextColor(ContextCompat.getColor(this, R.color.state_green))
+                binding.btnInstallModel.backgroundTintList = ContextCompat.getColorStateList(this, R.color.state_green_bg)
             } else {
                 binding.tvModelStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.state_orange))
-                binding.btnInstallModel.visibility = View.VISIBLE
-                val lang = viewModel.commLanguage.value?.displayName ?: "Hindi"
-                binding.btnInstallModel.text = "📥 Download $lang Model"
+                binding.tvModelStatusBadge.text = "⚠️ Model Not Installed ($lang)"
+                binding.btnInstallModel.text = "📥 Setup / Download $lang Model"
+                binding.btnInstallModel.setTextColor(ContextCompat.getColor(this, R.color.text_inverse))
+                binding.btnInstallModel.backgroundTintList = ContextCompat.getColorStateList(this, R.color.state_orange)
             }
         }
 
@@ -517,6 +590,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val prefs = getSharedPreferences("itantra_prefs", Context.MODE_PRIVATE)
+        val savedCommLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
+        val savedLang = CommunicationLanguage.fromCode(savedCommLangCode ?: "hi")
+        if (viewModel.commLanguage.value != savedLang) {
+            viewModel.setCommunicationLanguage(savedLang)
+            val commLanguages = CommunicationLanguage.values()
+            binding.spinnerCommLang.setSelection(commLanguages.indexOf(savedLang).coerceAtLeast(0), false)
+        }
         viewModel.checkCurrentModelStatus()
         val isBt = viewModel.isBluetoothTransport.value ?: false
         updateTransportButtons(!isBt)

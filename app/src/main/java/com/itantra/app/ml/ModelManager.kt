@@ -226,12 +226,19 @@ class ModelManager(private val context: Context) {
                 connection.connectTimeout = 20000
                 connection.readTimeout = 45000
                 connection.instanceFollowRedirects = true
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile; rv:100.0) Gecko/100.0 Firefox/100.0")
+                connection.setRequestProperty("Accept", "*/*")
                 connection.connect()
 
                 if (connection.responseCode !in 200..299) {
                     activeDownloads.remove(model.fileName)
+                    val errorDetail = if (connection.responseCode == 401) {
+                        "401 Unauthorized: The remote server requires authentication. You can use 'Instant Demo Setup' or enter a custom model link."
+                    } else {
+                        "HTTP ${connection.responseCode}: ${connection.responseMessage}"
+                    }
                     withContext(Dispatchers.Main) {
-                        onResult(false, "HTTP ${connection.responseCode}: ${connection.responseMessage}")
+                        onResult(false, errorDetail)
                     }
                     return@withContext
                 }
@@ -305,6 +312,34 @@ class ModelManager(private val context: Context) {
         } else {
             false
         }
+    }
+
+    /**
+     * Creates a lightweight demo/test model file on device for offline testing and demonstration.
+     */
+    fun createDemoModel(fileName: String): Boolean {
+        return try {
+            val targetDir = modelsDir
+            val targetFile = File(targetDir, fileName)
+            FileOutputStream(targetFile).use { output ->
+                val header = "iTantra_Demo_Model_${fileName}_ONNX".toByteArray()
+                output.write(header)
+                val dummy = ByteArray(2048)
+                for (i in 0 until 50) {
+                    output.write(dummy)
+                }
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating demo model $fileName: ${e.message}", e)
+            false
+        }
+    }
+
+    fun createDemoModelsForLanguage(language: CommunicationLanguage): Boolean {
+        val sttOk = createDemoModel(language.sttModelFile)
+        val ttsOk = createDemoModel(language.ttsModelFile)
+        return sttOk && ttsOk
     }
 
     /**

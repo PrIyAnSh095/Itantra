@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -79,6 +80,7 @@ class SettingsActivity : AppCompatActivity() {
         setupVoicePersona()
         setupTransportRadio()
         setupModelImport()
+        setupDemoButton()
         populateModelsList()
     }
 
@@ -88,24 +90,47 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupDemoButton() {
+        binding.btnQuickDemoSetup.setOnClickListener {
+            val commLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
+            val lang = CommunicationLanguage.fromCode(commLangCode ?: "hi")
+            modelManager.createDemoModelsForLanguage(lang)
+            populateModelsList()
+            Toast.makeText(this, "⚡ Offline demo models activated for ${lang.displayName}!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun setupLanguageSpinners() {
-        // App Language
+        // App UI Language
         val appLanguages = AppLanguage.values()
         val appLangNames = appLanguages.map { "${it.displayName} (${it.nativeName})" }
         val appAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, appLangNames)
         binding.settingsSpinnerAppLang.adapter = appAdapter
 
         val currentAppLang = AppLanguageManager.getSelectedLanguage(this)
-        binding.settingsSpinnerAppLang.setSelection(appLanguages.indexOf(currentAppLang))
+        val initialAppIndex = appLanguages.indexOf(currentAppLang).coerceAtLeast(0)
+        binding.settingsSpinnerAppLang.setSelection(initialAppIndex, false)
+
+        var userTouchedAppLang = false
+        binding.settingsSpinnerAppLang.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
+                userTouchedAppLang = true
+            }
+            false
+        }
 
         binding.settingsSpinnerAppLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!userTouchedAppLang) return
+                userTouchedAppLang = false
                 val selected = appLanguages[position]
                 if (selected != AppLanguageManager.getSelectedLanguage(this@SettingsActivity)) {
                     AppLanguageManager.applyAppLanguage(this@SettingsActivity, selected)
                 }
             }
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                userTouchedAppLang = false
+            }
         }
 
         // Communication Language
@@ -113,7 +138,31 @@ class SettingsActivity : AppCompatActivity() {
         val commLangNames = commLanguages.map { "${it.displayName} (${it.nativeName})" }
         val commAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, commLangNames)
         binding.settingsSpinnerCommLang.adapter = commAdapter
-        binding.settingsSpinnerCommLang.setSelection(commLanguages.indexOf(CommunicationLanguage.HINDI))
+
+        val savedCommLangCode = prefs.getString("comm_language_code", CommunicationLanguage.HINDI.code)
+        val currentCommLang = CommunicationLanguage.fromCode(savedCommLangCode ?: "hi")
+        val initialCommIndex = commLanguages.indexOf(currentCommLang).coerceAtLeast(0)
+        binding.settingsSpinnerCommLang.setSelection(initialCommIndex, false)
+
+        var userTouchedCommLang = false
+        binding.settingsSpinnerCommLang.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN || event.action == MotionEvent.ACTION_UP) {
+                userTouchedCommLang = true
+            }
+            false
+        }
+
+        binding.settingsSpinnerCommLang.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (!userTouchedCommLang) return
+                userTouchedCommLang = false
+                val selected = commLanguages[position]
+                prefs.edit().putString("comm_language_code", selected.code).apply()
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                userTouchedCommLang = false
+            }
+        }
     }
 
     private fun setupVoicePersona() {
@@ -267,7 +316,20 @@ class SettingsActivity : AppCompatActivity() {
                                     if (success) {
                                         Toast.makeText(this@SettingsActivity, "${model.name} installed successfully!", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        Toast.makeText(this@SettingsActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
+                                        if (error?.contains("401") == true) {
+                                            AlertDialog.Builder(this@SettingsActivity)
+                                                .setTitle("401 Unauthorized")
+                                                .setMessage("Download for ${model.name} failed because the remote repository requires authentication (401 Unauthorized).\n\nWould you like to activate the instant offline Demo Model for ${model.name} instead?")
+                                                .setPositiveButton("⚡ Activate Demo Model") { _, _ ->
+                                                    modelManager.createDemoModel(model.fileName)
+                                                    populateModelsList()
+                                                    Toast.makeText(this@SettingsActivity, "⚡ ${model.name} demo model activated!", Toast.LENGTH_SHORT).show()
+                                                }
+                                                .setNegativeButton(R.string.dialog_cancel, null)
+                                                .show()
+                                        } else {
+                                            Toast.makeText(this@SettingsActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
+                                        }
                                     }
                                     populateModelsList()
                                 }

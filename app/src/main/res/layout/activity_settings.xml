@@ -65,6 +65,7 @@
 
                     <Spinner
                         android:id="@+id/settingsSpinnerAppLang"
+                        android:saveEnabled="false"
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_selector_box"
@@ -81,6 +82,7 @@
 
                     <Spinner
                         android:id="@+id/settingsSpinnerCommLang"
+                        android:saveEnabled="false"
                         android:layout_width="match_parent"
                         android:layout_height="44dp"
                         android:background="@drawable/bg_selector_box"/>
@@ -258,13 +260,29 @@
                     android:letterSpacing="0.08"/>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnQuickDemoSetup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="⚡ Demo Setup"
+                    android:textSize="11sp"
+                    android:textColor="@color/primary_blue"
+                    app:backgroundTint="@color/primary_blue_light"
+                    app:cornerRadius="6dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:layout_marginEnd="6dp"
+                    style="@style/Widget.MaterialComponents.Button"/>
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnImportModel"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
                     android:text="📁 Import .onnx"
                     android:textSize="11sp"
                     android:textColor="@color/primary_blue"
-                    android:backgroundTint="@color/primary_blue_light"
+                    app:backgroundTint="@color/primary_blue_light"
                     app:cornerRadius="6dp"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
